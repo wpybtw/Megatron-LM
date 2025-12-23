@@ -188,7 +188,7 @@ EVAL_AND_LOGGING_ARGS=(
     --eval-interval 100
     --save-interval 1000
     --log-throughput
-    --use-pytorch-profiler
+    # --use-pytorch-profiler
     --profile
     --profile-step-start 2
     --profile-step-end 3
@@ -206,8 +206,19 @@ if [ ! -f "$PRETRAIN_SCRIPT_PATH" ]; then
     exit 1
 fi
 
+PROFILE_NAME="megatron_qwen_${ATTN_TYPE}_profile"
+NSYS_CMD="nsys profile \
+    --trace=cuda,nvtx,osrt,cublas,cudnn \
+    --sample=cpu \
+    --output=${PROFILE_NAME} \
+    --force-overwrite=true \
+    --capture-range=cudaProfilerApi \
+    --capture-range-end=stop \
+    --gpu-metrics-device=all \
+    --python-backtrace=cuda"
+
 # Run the training command
-torchrun ${DISTRIBUTED_ARGS[@]} \
+$NSYS_CMD python -m torch.distributed.run ${DISTRIBUTED_ARGS[@]} \
     "$PRETRAIN_SCRIPT_PATH" \
     ${MODEL_ARGS[@]} \
     ${TRAINING_ARGS[@]} \
